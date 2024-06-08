@@ -1,32 +1,96 @@
-from typing import Annotated
+import json
+import tomllib
+
+from datetime import datetime
+from pathlib import Path
+from typing import Annotated, Union
 
 from fastapi import FastAPI, Body
-from llms.base import LargeLanguageModels
+from jinja2 import Template
+from pydantic import BaseModel
+
+from langchain_anthropic import ChatAnthropic
+from langchain_openai import ChatOpenAI
+
+from langserve import add_routes
 
 
-app = FastAPI()
+with (Path(__file__).parents[2] / "pyproject.toml").open('rb') as fo:
+        pyproject = tomllib.load(fo)
+
+class Project(BaseModel):
+    toml: dict = pyproject
+     
+    @property
+    def description(self):
+        return self.toml['tool']['poetry']['description']
+    
+
+    @property
+    def name(self):
+          return self.toml['tool']['poetry']['name']
+     
+    @property
+    def version(self):
+          return self.toml['tool']['poetry']['version']
+
+project = Project()
+
+app = FastAPI(
+     title=project.name,
+     version=project.version,
+     description=project.description
+)
+
+# add_routes(
+#      app,
+#      ChatOpenAI(model="gpt-3.5-turbo-0125"),
+#      path="/openai"
+# )
+
+# add_routes(
+#      app,
+#      ChatAnthropic(model="claude-3-haiku-20240307"),
+#      path="/anthropic"
+# )
 
 
-@app.get("/llms/{model_name}")
-async def llm_models(model_name: LargeLanguageModels):
-    match model_name:
+class QueryData(BaseModel):
+    prompt: str
+    model: str
 
-        case LargeLanguageModels.chatgpt:
-            return { "model_name": model_name, "description": "OpenAI's ChatGPT" }
 
-        case LargeLanguageModels.claude:
-            return { "model_name": model_name, "description": "Anthropic's Claude" }
+@app.post("/conversation")
+async def conversation(prompt: str):
+     pass
 
-        case LargeLanguageModels.gemini:
-            return { "model_name": model_name, "description": "Google's Gemini" }
-
-        case LargeLanguageModels.llama:
-            return { "model_name": model_name, "description": "Meta's Llama" }
-
-@app.post("/llms/{model_name}/query")
-async def llm_query(model_name: LargeLanguageModels, query: Annotated[str, Body()]):
-    return { "model_name": model_name, "query": query }
+@app.get("/moduleDescriptor.json")
+async def moduleDescriptor():
+    module_descriptor = Template("""{
+          "id": "{{project.name}}-{{project.version}}",
+          "name": "{{project.name}}",
+          "provides": [
+             {
+              "id": "{{project.name|title }}",
+              "version": "{{ project.version }}",
+              "handlers": [
+                {% for handler in handlers %}
+                {{ handler }}
+                {% if not loop.last %},{% endif %}
+                {% endfor %}
+              ]
+            }
+          ],
+          "requires": [],
+          "launchDescriptor": {
+            "exec": "poetry run fastapi dev src/edge_ai/main.py"
+          }
+}""").render(project=project, handlers=['"query"', '"conversation"'])
+    return json.loads(module_descriptor)
 
 @app.get("/")
 async def about():
-    return { "about": "Edge AI for FOLIO" }
+    return {
+        "name": project.name,
+        "version": project.version
+    }
