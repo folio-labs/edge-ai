@@ -10,6 +10,7 @@ from jinja2 import Template
 from pydantic import BaseModel
 
 from langchain_anthropic import ChatAnthropic
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
 
 from langserve import add_routes
@@ -42,17 +43,27 @@ app = FastAPI(
      description=project.description
 )
 
-# add_routes(
-#      app,
-#      ChatOpenAI(model="gpt-3.5-turbo-0125"),
-#      path="/openai"
-# )
+add_routes(
+     app,
+     ChatAnthropic(model="claude-3-haiku-20240307"),
+     path="/anthropic"
+)
 
-# add_routes(
-#      app,
-#      ChatAnthropic(model="claude-3-haiku-20240307"),
-#      path="/anthropic"
-# )
+add_routes(
+     app,
+     ChatGoogleGenerativeAI(model="gemini-prop"),
+     path="/gemini"
+)
+
+add_routes(
+     app,
+     ChatOpenAI(model="gpt-3.5-turbo-0125"),
+     path="/openai"
+)
+
+
+
+
 
 
 class QueryData(BaseModel):
