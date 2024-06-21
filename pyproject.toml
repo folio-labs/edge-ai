@@ -13,11 +13,9 @@ fastapi = "^0.111.0"
 openai = "^1.30.5"
 anthropic = "^0.28.0"
 google-generativeai = "^0.5.4"
-langserve = {extras = ["server"], version = "^0.2.1"}
-langchain-anthropic = "^0.1.15"
-langchain-openai = "^0.1.8"
-langchain-google-genai = "^1.0.6"
-dspy-ai = "^2.4.9"
+dspy = "^0.1.5"
+folioclient = "^0.60.3"
+
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.1.1"

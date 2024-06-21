@@ -1,20 +1,24 @@
 import json
+import os
 import tomllib
 
 from datetime import datetime
 from pathlib import Path
 from typing import Annotated, Union
 
-from fastapi import FastAPI, Body
+import dspy
+
+from dspy import configure, ChainOfThought, OpenAI
+from fastapi import FastAPI, Body, HTTPException
+from folioclient import FolioClient
 from jinja2 import Template
 from pydantic import BaseModel
 
-from langchain_anthropic import ChatAnthropic
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_openai import ChatOpenAI
 
-from langserve import add_routes
-
+from edge_ai.inventory import rag
+from edge_ai.inventory.signatures.holdings import CheckHoldings
+from edge_ai.inventory.signatures.instance import CheckInstance
+from edge_ai.inventory.signatures.items import CheckItem
 
 with (Path(__file__).parents[2] / "pyproject.toml").open('rb') as fo:
         pyproject = tomllib.load(fo)
@@ -43,32 +47,55 @@ app = FastAPI(
      description=project.description
 )
 
-add_routes(
-     app,
-     ChatAnthropic(model="claude-3-haiku-20240307"),
-     path="/anthropic"
+chatgpt = OpenAI(model='gpt-3.5-turbo')
+
+folio_client = FolioClient(
+    os.environ.get("OKAPI_URL"),
+    os.environ.get("TENANT_ID"), 
+    os.environ.get("ADMIN_USER"), 
+    os.environ.get("ADMIN_PASSWORD")
 )
-
-add_routes(
-     app,
-     ChatGoogleGenerativeAI(model="gemini-prop"),
-     path="/gemini"
-)
-
-add_routes(
-     app,
-     ChatOpenAI(model="gpt-3.5-turbo-0125"),
-     path="/openai"
-)
-
-
-
-
-
 
 class QueryData(BaseModel):
     prompt: str
     model: str
+
+@app.post("/inventory/{type_of}/check")
+async def check_inventory_record(type_of:str, text: str, uuid: str):
+     
+    match type_of:
+          
+          case "holdings":
+               holdings = folio_client.folio_get(f"/inventory-storage/holdings/{uuid}")
+
+               with dspy.context(lm=chatgpt):
+                    cot = ChainOfThought(CheckHoldings)
+                    predication = cot(holdings=holdings, text=text)
+          
+          case "instance":
+              instance = folio_client.folio_get(f"/inventory/instances/{uuid}")
+
+              with dspy.context(lm=chatgpt):
+                  cot = ChainOfThought(CheckInstance)
+                  predication = cot(context=json.dumps(instance), instance=text)
+
+               
+          case "item":
+               item = folio_client.folio_get(f"/inventory/items/{uuid}")
+
+               with dspy.context(lm=chatgpt):
+                    cot = ChainOfThought(CheckItem) 
+                    predication = cot(item=item, text=text)
+
+          case _:
+              raise HTTPException(status_code=404, detail=f"Unknown inventory record: {type_of} with {uuid} not found")
+               
+
+    return {
+          "rationale": predication.rationale,
+          "verifies": predication.verifies
+     }
+
 
 
 @app.post("/conversation")
