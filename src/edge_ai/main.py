@@ -126,7 +126,21 @@ async def moduleDescriptor():
               "version": "{{ project.version }}",
               "handlers": [
                 {% for handler in handlers %}
-                {{ handler }}
+                  {
+                     "methods": [
+                     {% for method in handler.methods %}
+                       "{{ method }}"
+                      {% if not loop.last %},{% endif %}
+                      {% endfor %} 
+                     ],
+                     "pathPattern": "{{ handler.pathPattern }}",
+                     "permissionsRequired": [
+                      {% for permission in handler.permissionsRequired %}
+                      "{{ permission }}"
+                      {% if not loop.last %},{% endif %}
+                      {% endfor %}
+                     ]
+                  }
                 {% if not loop.last %},{% endif %}
                 {% endfor %}
               ]
@@ -137,7 +151,35 @@ async def moduleDescriptor():
             "exec": "poetry run fastapi dev src/edge_ai/main.py"
           }
 }"""
-    ).render(project=project, handlers=['"query"', '"conversation"', '"inventory"'])
+    ).render(project=project, handlers=[
+        {
+            "methods": [
+                "POST"
+            ],
+            "pathPattern": "/inventory/holdings/check",
+            "permissionsRequired": [
+                "edge-ai.post.check"
+            ]
+        },
+        {
+            "methods": [
+                "POST"
+            ],
+            "pathPattern": "/inventory/instance/check",
+            "permissionsRequired": [
+                "edge-ai.post.check"
+            ]
+        },
+        {
+            "methods": [
+                "POST"
+            ],
+            "pathPattern": "/inventory/item/check",
+            "permissionsRequired": [
+                "edge-ai.post.check"
+            ]
+        }
+    ])
     return json.loads(module_descriptor)
 
 
