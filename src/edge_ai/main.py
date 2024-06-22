@@ -153,6 +153,10 @@ async def about():
             "tenant": os.environ.get("TENANT_ID"),
             "user": os.environ.get("ADMIN_USER"),
         },
+        "sinopia": {
+            "url": os.environ.get("SINOPIA_URL"),
+            "api": os.environ.get("SINOPIA_API"),
+        },
         "date": datetime.now(UTC),
         "models": {
             "chatgpt": chatgpt.kwargs["model"]
