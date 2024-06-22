@@ -21,6 +21,7 @@ folioclient = "^0.60.3"
 pytest = "^7.1.1"
 ruff = "^0.4.6"
 black = "^24.4.2"
+coverage = "^7.5.3"
 
 [build-system]
 requires = ["poetry-core"]
