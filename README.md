@@ -7,3 +7,5 @@
 1. Run dependency installation `poetry install`
 1. Source local environmental .env file `source .env`
 1. Run fastapi in local dev mode `poetry run fastapi src/edge_ai/main.py`
+
+[poetry]: https://python-poetry.org/
