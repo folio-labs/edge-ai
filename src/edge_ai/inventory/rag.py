@@ -1,8 +1,7 @@
-from dspy import ChainOfThought, InputField, OutputField, Module, Prediction, Retrieve, Signature
+from dspy import ChainOfThought, Module, Prediction, Retrieve
 
 from edge_ai.inventory.signatures.holdings import CheckHoldings
 from edge_ai.inventory.signatures.instance import CheckInstance
-from edge_ai.inventory.signatures.items import CheckItem
 
 class Items(Module):
 

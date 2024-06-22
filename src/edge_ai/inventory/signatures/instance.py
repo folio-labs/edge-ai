@@ -5,4 +5,4 @@ class CheckInstance(Signature):
 
     context = InputField(desc="provided JSON of Instance is assumed to be true")
     instance = InputField()
-    verifies = OutputField(desc="Give a percentage 0-100 indicating how the incoming JSON is faithful to Instance JSON")
+    verifies = OutputField(desc="Give a percentage 0-100 indicating how many of the key-values of the incoming JSON match to the Instance JSON key-values")
