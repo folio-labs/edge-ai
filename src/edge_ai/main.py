@@ -4,6 +4,7 @@ import tomllib
 
 from datetime import datetime, UTC
 from pathlib import Path
+from typing import Union
 
 import dspy
 import httpx
@@ -55,13 +56,18 @@ folio_client = FolioClient(
 )
 
 @app.post("/inventory/{type_of}/check")
-async def check_inventory_record(type_of: str, text: str, uuid: str):
+async def check_inventory_record(type_of: str, text: str, uuid: Union[str, None]):
 
     match type_of:
 
         case "holdings":
             try:
-                holdings = folio_client.folio_get(f"/holdings-storage/holdings/{uuid}")
+                if uuid:
+                    holdings = folio_client.folio_get(f"/holdings-storage/holdings/{uuid}")
+                else:
+                    # Use RAG module
+                    holdings = []
+
 
             except httpx.HTTPStatusError as e:
                 if "404 Not Found" in e.args[0]:
@@ -70,12 +76,18 @@ async def check_inventory_record(type_of: str, text: str, uuid: str):
                     )
 
             with dspy.context(lm=chatgpt):
-                cot = ChainOfThought(CheckHoldings)
-                predication = cot(holdings=holdings, text=text)
+                if uuid:
+                    cot = ChainOfThought(CheckHoldings)
+                    predication = cot(holdings=holdings, text=text)
+                #else: Holdings RAG
 
         case "instance":
             try:
-                instance = folio_client.folio_get(f"/inventory/instances/{uuid}")
+                if uuid:
+                    instance = folio_client.folio_get(f"/inventory/instances/{uuid}")
+                else:
+                    instance = []
+            
             except httpx.HTTPStatusError as e:
                 if "404 Not Found" in e.args[0]:
                     raise HTTPException(
@@ -83,13 +95,18 @@ async def check_inventory_record(type_of: str, text: str, uuid: str):
                     )
 
             with dspy.context(lm=chatgpt):
-                cot = ChainOfThought(CheckInstance)
-                predication = cot(context=json.dumps(instance), instance=text)
-                return predication
+                if uuid:
+                    cot = ChainOfThought(CheckInstance)
+                    predication = cot(context=json.dumps(instance), instance=text)
+                #else: Instance RAG
 
         case "item":
             try:
-                item = folio_client.folio_get(f"/inventory/items/{uuid}")
+                if uuid:
+                    item = folio_client.folio_get(f"/inventory/items/{uuid}")
+                else:
+                    item = []
+
             except httpx.HTTPStatusError as e:
                 if "404 Not Found" in e.args[0]:
                     raise HTTPException(
@@ -97,8 +114,10 @@ async def check_inventory_record(type_of: str, text: str, uuid: str):
                     )
 
             with dspy.context(lm=chatgpt):
-                cot = ChainOfThought(CheckItem)
-                predication = cot(item=item, text=text)
+                if uuid:
+                    cot = ChainOfThought(CheckItem)
+                    predication = cot(item=item, text=text)
+                #else: Item RAG
 
         case _:
             raise HTTPException(
