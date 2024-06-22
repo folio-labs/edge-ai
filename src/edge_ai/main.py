@@ -4,19 +4,17 @@ import tomllib
 
 from datetime import datetime, UTC
 from pathlib import Path
-from typing import Annotated, Union
 
 import dspy
 import httpx
 
-from dspy import configure, ChainOfThought, OpenAI, Predict
-from fastapi import FastAPI, Body, HTTPException, Response
+from dspy import ChainOfThought, OpenAI
+from fastapi import FastAPI, HTTPException
 from folioclient import FolioClient
 from jinja2 import Template
 from pydantic import BaseModel
 
 
-from edge_ai.inventory import rag
 from edge_ai.inventory.signatures.holdings import CheckHoldings
 from edge_ai.inventory.signatures.instance import CheckInstance
 from edge_ai.inventory.signatures.items import CheckItem
@@ -139,7 +137,7 @@ async def moduleDescriptor():
             "exec": "poetry run fastapi dev src/edge_ai/main.py"
           }
 }"""
-    ).render(project=project, handlers=['"query"', '"conversation"'])
+    ).render(project=project, handlers=['"query"', '"conversation"', '"inventory"'])
     return json.loads(module_descriptor)
 
 
