@@ -61,7 +61,7 @@ async def check_inventory_record(type_of: str, text: str, uuid: str):
 
         case "holdings":
             try:
-                holdings = folio_client.folio_get(f"/inventory-storage/holdings/{uuid}")
+                holdings = folio_client.folio_get(f"/holdings-storage/holdings/{uuid}")
 
             except httpx.HTTPStatusError as e:
                 if "404 Not Found" in e.args[0]:

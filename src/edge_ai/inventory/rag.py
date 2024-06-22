@@ -2,6 +2,7 @@ from dspy import ChainOfThought, Module, Prediction, Retrieve
 
 from edge_ai.inventory.signatures.holdings import CheckHoldings
 from edge_ai.inventory.signatures.instance import CheckInstance
+from edge_ai.inventory.signatures.items import CheckItem
 
 class Items(Module):
 
@@ -9,7 +10,7 @@ class Items(Module):
         super().__init__()
 
         self.retrieve = Retrieve(k=num_items)
-        self.verified = ChainOfThought(CheckItems)
+        self.verified = ChainOfThought(CheckItem)
 
     def verify(self, items: str):
         context = self.retrieve(context=context, items=items)
