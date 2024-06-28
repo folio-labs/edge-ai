@@ -103,7 +103,7 @@ async def check_inventory_record(type_of: str, text: str, uuid: Union[str, None]
         case "item":
             try:
                 if uuid:
-                    item = folio_client.folio_get(f"/inventory/items/{uuid}")
+                    item = folio_client.folio_get(f"/item-storage/items/{uuid}")
                 else:
                     item = []
 
