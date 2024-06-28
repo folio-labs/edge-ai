@@ -6,6 +6,12 @@ from folioclient import FolioClient
 
 def _item_lookups(folio_client: FolioClient) -> dict:
     lookups = dict()
+    for types_info in [
+        folio_client.call_number_types,
+        folio_client.locations
+    ]:
+        for row in types_info:
+            lookups[row['id']] = row['name']
     return lookups
 
 def _item_payload(payload):
@@ -29,6 +35,12 @@ def example(item: dict, folio_client: FolioClient) -> Example:
     for key, payload in item.items():
 
         match key:
+
+            case "effectiveLocationId":
+                expanded["effectiveLocation"] = {
+                    "id": payload,
+                    "name": lookups[payload]
+                }
 
             case _:
                 expanded[key] = _item_payload(payload)

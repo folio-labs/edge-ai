@@ -37,15 +37,24 @@ def example(holdings: dict, folio_client: FolioClient) -> Example:
         match key:
 
             case "callNumberTypeId":
-                expanded["callNumberType"] = lookups[payload]
+                expanded["callNumberType"] = {
+                    "id": payload,
+                    "name": lookups[payload] 
+                }
 
 
             case "effectiveLocationId":
-                expanded["effectiveLocation"] = lookups[payload]
+                expanded["effectiveLocation"] = {
+                    "id": payload,
+                    "name": lookups[payload]
+                }
 
 
             case "permanentLocationId":
-                expanded["permanentLocation"] = lookups[payload]
+                expanded["permanentLocation"] = {
+                    "id": payload,
+                    "name": lookups[payload]
+                }
 
 
             case _:
