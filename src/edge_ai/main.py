@@ -4,6 +4,7 @@ import tomllib
 
 from datetime import datetime, UTC
 from pathlib import Path
+from typing import Union
 
 import dspy
 import httpx
@@ -15,9 +16,9 @@ from jinja2 import Template
 from pydantic import BaseModel
 
 
-from edge_ai.inventory.signatures.holdings import CheckHoldings
-from edge_ai.inventory.signatures.instance import CheckInstance
-from edge_ai.inventory.signatures.items import CheckItem
+from edge_ai.inventory.signatures.holdings import HoldingsSimilarity
+from edge_ai.inventory.signatures.instance import InstanceSimilarity
+from edge_ai.inventory.signatures.item import ItemSimilarity
 
 with (Path(__file__).parents[2] / "pyproject.toml").open("rb") as fo:
     pyproject = tomllib.load(fo)
@@ -54,14 +55,19 @@ folio_client = FolioClient(
     os.environ.get("ADMIN_PASSWORD"),
 )
 
-@app.post("/inventory/{type_of}/check")
-async def check_inventory_record(type_of: str, text: str, uuid: str):
+@app.post("/inventory/{type_of}/similarity")
+async def check_inventory_record(type_of: str, text: str, uuid: Union[str, None]):
 
     match type_of:
 
         case "holdings":
             try:
-                holdings = folio_client.folio_get(f"/inventory-storage/holdings/{uuid}")
+                if uuid:
+                    holdings = folio_client.folio_get(f"/holdings-storage/holdings/{uuid}")
+                else:
+                    # Use RAG module
+                    holdings = []
+
 
             except httpx.HTTPStatusError as e:
                 if "404 Not Found" in e.args[0]:
@@ -70,12 +76,18 @@ async def check_inventory_record(type_of: str, text: str, uuid: str):
                     )
 
             with dspy.context(lm=chatgpt):
-                cot = ChainOfThought(CheckHoldings)
-                predication = cot(holdings=holdings, text=text)
+                if uuid:
+                    cot = ChainOfThought(HoldingsSimilarity)
+                    predication = cot(holdings=holdings, text=text)
+                #else: Holdings RAG
 
         case "instance":
             try:
-                instance = folio_client.folio_get(f"/inventory/instances/{uuid}")
+                if uuid:
+                    instance = folio_client.folio_get(f"/inventory/instances/{uuid}")
+                else:
+                    instance = []
+            
             except httpx.HTTPStatusError as e:
                 if "404 Not Found" in e.args[0]:
                     raise HTTPException(
@@ -83,13 +95,18 @@ async def check_inventory_record(type_of: str, text: str, uuid: str):
                     )
 
             with dspy.context(lm=chatgpt):
-                cot = ChainOfThought(CheckInstance)
-                predication = cot(context=json.dumps(instance), instance=text)
-                return predication
+                if uuid:
+                    cot = ChainOfThought(InstanceSimilarity)
+                    predication = cot(context=json.dumps(instance), instance=text)
+                #else: Instance RAG
 
         case "item":
             try:
-                item = folio_client.folio_get(f"/inventory/items/{uuid}")
+                if uuid:
+                    item = folio_client.folio_get(f"/item-storage/items/{uuid}")
+                else:
+                    item = []
+
             except httpx.HTTPStatusError as e:
                 if "404 Not Found" in e.args[0]:
                     raise HTTPException(
@@ -97,8 +114,10 @@ async def check_inventory_record(type_of: str, text: str, uuid: str):
                     )
 
             with dspy.context(lm=chatgpt):
-                cot = ChainOfThought(CheckItem)
-                predication = cot(item=item, text=text)
+                if uuid:
+                    cot = ChainOfThought(ItemSimilarity)
+                    predication = cot(item=item, text=text)
+                #else: Item RAG
 
         case _:
             raise HTTPException(
@@ -126,7 +145,21 @@ async def moduleDescriptor():
               "version": "{{ project.version }}",
               "handlers": [
                 {% for handler in handlers %}
-                {{ handler }}
+                  {
+                     "methods": [
+                     {% for method in handler.methods %}
+                       "{{ method }}"
+                      {% if not loop.last %},{% endif %}
+                      {% endfor %} 
+                     ],
+                     "pathPattern": "{{ handler.pathPattern }}",
+                     "permissionsRequired": [
+                      {% for permission in handler.permissionsRequired %}
+                      "{{ permission }}"
+                      {% if not loop.last %},{% endif %}
+                      {% endfor %}
+                     ]
+                  }
                 {% if not loop.last %},{% endif %}
                 {% endfor %}
               ]
@@ -137,7 +170,35 @@ async def moduleDescriptor():
             "exec": "poetry run fastapi dev src/edge_ai/main.py"
           }
 }"""
-    ).render(project=project, handlers=['"query"', '"conversation"', '"inventory"'])
+    ).render(project=project, handlers=[
+        {
+            "methods": [
+                "POST"
+            ],
+            "pathPattern": "/inventory/holdings/similiarity",
+            "permissionsRequired": [
+                "edge-ai.post.similiarity"
+            ]
+        },
+        {
+            "methods": [
+                "POST"
+            ],
+            "pathPattern": "/inventory/instance/similiarity",
+            "permissionsRequired": [
+                "edge-ai.post.similiarity"
+            ]
+        },
+        {
+            "methods": [
+                "POST"
+            ],
+            "pathPattern": "/inventory/item/similiarity",
+            "permissionsRequired": [
+                "edge-ai.post.similiarity"
+            ]
+        }
+    ])
     return json.loads(module_descriptor)
 
 
