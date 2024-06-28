@@ -1,6 +1,6 @@
 from dspy import InputField, OutputField, Signature
 
-class CheckHoldings(Signature):
+class HoldingsSimilarity(Signature):
     """Verify that the holdings is based on the provided JSON record."""
 
     context = InputField(desc="provided JSON of Holding is assumed to be true")

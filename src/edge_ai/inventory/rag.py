@@ -1,8 +1,8 @@
 from dspy import ChainOfThought, Module, Prediction, Retrieve
 
-from edge_ai.inventory.signatures.holdings import CheckHoldings
-from edge_ai.inventory.signatures.instance import CheckInstance
-from edge_ai.inventory.signatures.items import CheckItem
+from edge_ai.inventory.signatures.holdings import HoldingsSimilarity
+from edge_ai.inventory.signatures.instance import InstanceSimilarity
+from edge_ai.inventory.signatures.item import ItemSimilarity
 
 class Items(Module):
 
@@ -10,7 +10,7 @@ class Items(Module):
         super().__init__()
 
         self.retrieve = Retrieve(k=num_items)
-        self.verified = ChainOfThought(CheckItem)
+        self.verified = ChainOfThought(ItemSimilarity)
 
     def verify(self, items: str):
         context = self.retrieve(context=context, items=items)
@@ -29,7 +29,7 @@ class Holdings(Module):
         super().__init__()
 
         self.retrieve = Retrieve(k=num_holdings)
-        self.verified = ChainOfThought(CheckHoldings)
+        self.verified = ChainOfThought(HoldingsSimilarity)
 
     def verify(self, holdings: str):
          context = self.retrieve(context=context, holdings=holdings)
@@ -48,7 +48,7 @@ class Instances(Module):
         super().__init__()
 
         self.retrieve = Retrieve(k=num_instances)
-        self.verified = ChainOfThought(CheckInstance)
+        self.verified = ChainOfThought(InstanceSimilarity)
 
     def forward(self, operation: str, instance: str):
         context = self.retrieve(instance=instance).passages

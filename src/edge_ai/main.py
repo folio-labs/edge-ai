@@ -16,9 +16,9 @@ from jinja2 import Template
 from pydantic import BaseModel
 
 
-from edge_ai.inventory.signatures.holdings import CheckHoldings
-from edge_ai.inventory.signatures.instance import CheckInstance
-from edge_ai.inventory.signatures.items import CheckItem
+from edge_ai.inventory.signatures.holdings import HoldingsSimilarity
+from edge_ai.inventory.signatures.instance import InstanceSimilarity
+from edge_ai.inventory.signatures.item import ItemSimilarity
 
 with (Path(__file__).parents[2] / "pyproject.toml").open("rb") as fo:
     pyproject = tomllib.load(fo)
@@ -55,7 +55,7 @@ folio_client = FolioClient(
     os.environ.get("ADMIN_PASSWORD"),
 )
 
-@app.post("/inventory/{type_of}/check")
+@app.post("/inventory/{type_of}/similarity")
 async def check_inventory_record(type_of: str, text: str, uuid: Union[str, None]):
 
     match type_of:
@@ -77,7 +77,7 @@ async def check_inventory_record(type_of: str, text: str, uuid: Union[str, None]
 
             with dspy.context(lm=chatgpt):
                 if uuid:
-                    cot = ChainOfThought(CheckHoldings)
+                    cot = ChainOfThought(HoldingsSimilarity)
                     predication = cot(holdings=holdings, text=text)
                 #else: Holdings RAG
 
@@ -96,7 +96,7 @@ async def check_inventory_record(type_of: str, text: str, uuid: Union[str, None]
 
             with dspy.context(lm=chatgpt):
                 if uuid:
-                    cot = ChainOfThought(CheckInstance)
+                    cot = ChainOfThought(InstanceSimilarity)
                     predication = cot(context=json.dumps(instance), instance=text)
                 #else: Instance RAG
 
@@ -115,7 +115,7 @@ async def check_inventory_record(type_of: str, text: str, uuid: Union[str, None]
 
             with dspy.context(lm=chatgpt):
                 if uuid:
-                    cot = ChainOfThought(CheckItem)
+                    cot = ChainOfThought(ItemSimilarity)
                     predication = cot(item=item, text=text)
                 #else: Item RAG
 
@@ -175,27 +175,27 @@ async def moduleDescriptor():
             "methods": [
                 "POST"
             ],
-            "pathPattern": "/inventory/holdings/check",
+            "pathPattern": "/inventory/holdings/similiarity",
             "permissionsRequired": [
-                "edge-ai.post.check"
+                "edge-ai.post.similiarity"
             ]
         },
         {
             "methods": [
                 "POST"
             ],
-            "pathPattern": "/inventory/instance/check",
+            "pathPattern": "/inventory/instance/similiarity",
             "permissionsRequired": [
-                "edge-ai.post.check"
+                "edge-ai.post.similiarity"
             ]
         },
         {
             "methods": [
                 "POST"
             ],
-            "pathPattern": "/inventory/item/check",
+            "pathPattern": "/inventory/item/similiarity",
             "permissionsRequired": [
-                "edge-ai.post.check"
+                "edge-ai.post.similiarity"
             ]
         }
     ])
