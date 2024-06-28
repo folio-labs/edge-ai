@@ -2,3 +2,5 @@
 __pycache__*
 dist/*
 *.log
+.coverage
+coverage.xml
