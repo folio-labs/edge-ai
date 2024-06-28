@@ -15,6 +15,21 @@ def _instance_lookups(folio_client: FolioClient) -> dict:
     return lookups
 
 
+def _instance_payload(payload):
+    output = None
+    match payload:
+
+        case dict():
+            output = _expand_dict(payload)
+
+        case list():
+            output = _expand_list(payload)
+
+        case _:
+            output = payload
+
+    return output
+
 def example(instance: dict, folio_client: FolioClient) -> Example:
     expanded = {}
     lookups = _instance_lookups(folio_client)
@@ -38,16 +53,7 @@ def example(instance: dict, folio_client: FolioClient) -> Example:
 
 
             case _:
-                match payload:
-
-                    case dict():
-                        expanded[key] = _expand_dict(payload)
-
-                    case list():
-                        expanded[key] = _expand_list(payload)
-
-                    case _:
-                        expanded[key] = payload
+                expanded[key] = _instance_payload(payload)
 
 
     return Example(**expanded).with_inputs("title", "hrid", "uuid")
