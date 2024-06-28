@@ -5,9 +5,9 @@ import dspy
 from dspy import ChainOfThought
 from dspy.utils.dummies import DummyLM
 
-from edge_ai.inventory.signatures.holdings import CheckHoldings
-from edge_ai.inventory.signatures.instance import CheckInstance
-from edge_ai.inventory.signatures.items import CheckItem
+from edge_ai.inventory.signatures.holdings import HoldingsSimilarity
+from edge_ai.inventory.signatures.instance import InstanceSimilarity
+from edge_ai.inventory.signatures.item import ItemSimilarity
 
 
 def test_check_holdings_uuid():
@@ -19,7 +19,7 @@ def test_check_holdings_uuid():
 
     dspy.settings.configure(lm=lm)
 
-    cot = ChainOfThought(CheckHoldings)
+    cot = ChainOfThought(HoldingsSimilarity)
 
     predication = cot(context="{}", holdings=json.dumps({ "id": "ef88a6a1-e95f-49a4-99c0-40656302a055" }))
 
@@ -34,7 +34,7 @@ def test_check_instance_uuid():
 
     dspy.settings.configure(lm=lm)
 
-    cot = ChainOfThought(CheckInstance)
+    cot = ChainOfThought(InstanceSimilarity)
 
     predication = cot(context="{}", instance=json.dumps({ "id": "5c93512d-401c-4f68-baca-0f53a2a449d3"}))
 
@@ -49,7 +49,7 @@ def test_check_item_uuid():
 
     dspy.settings.configure(lm=lm)
 
-    cot = ChainOfThought(CheckItem)
+    cot = ChainOfThought(ItemSimilarity)
 
     predication = cot(context="{}", item=json.dumps({ "id": "8c20dfdc-645b-499e-b969-320beb5069ea"}))
 
