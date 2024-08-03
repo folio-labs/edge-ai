@@ -4,21 +4,17 @@ import tomllib
 
 from datetime import datetime, UTC
 from pathlib import Path
-from typing import Union
 
-import dspy
-import httpx
-
-from dspy import ChainOfThought, OpenAI
-from fastapi import FastAPI, HTTPException
+from dspy import OpenAI
+from fastapi import FastAPI
 from folioclient import FolioClient
 from jinja2 import Template
 from pydantic import BaseModel
 
 
-from edge_ai.inventory.signatures.holdings import HoldingsSimilarity
-from edge_ai.inventory.signatures.instance import InstanceSimilarity
-from edge_ai.inventory.signatures.item import ItemSimilarity
+from edge_ai.inventory.router import router as inventory_router
+
+
 
 with (Path(__file__).parents[2] / "pyproject.toml").open("rb") as fo:
     pyproject = tomllib.load(fo)
@@ -46,6 +42,8 @@ app = FastAPI(
     title=project.name, version=project.version, description=project.description
 )
 
+app.include_router(inventory_router)
+
 chatgpt = OpenAI(model="gpt-3.5-turbo")
 
 folio_client = FolioClient(
@@ -54,78 +52,6 @@ folio_client = FolioClient(
     os.environ.get("ADMIN_USER"),
     os.environ.get("ADMIN_PASSWORD"),
 )
-
-@app.post("/inventory/{type_of}/similarity")
-async def check_inventory_record(type_of: str, text: str, uuid: Union[str, None]):
-
-    match type_of:
-
-        case "holdings":
-            try:
-                if uuid:
-                    holdings = folio_client.folio_get(f"/holdings-storage/holdings/{uuid}")
-                else:
-                    # Use RAG module
-                    holdings = []
-
-
-            except httpx.HTTPStatusError as e:
-                if "404 Not Found" in e.args[0]:
-                    raise HTTPException(
-                        status_code=404, detail=f"holdings {uuid} not Found"
-                    )
-
-            with dspy.context(lm=chatgpt):
-                if uuid:
-                    cot = ChainOfThought(HoldingsSimilarity)
-                    predication = cot(holdings=holdings, text=text)
-                #else: Holdings RAG
-
-        case "instance":
-            try:
-                if uuid:
-                    instance = folio_client.folio_get(f"/inventory/instances/{uuid}")
-                else:
-                    instance = []
-            
-            except httpx.HTTPStatusError as e:
-                if "404 Not Found" in e.args[0]:
-                    raise HTTPException(
-                        status_code=404, detail=f"instance {uuid} not Found"
-                    )
-
-            with dspy.context(lm=chatgpt):
-                if uuid:
-                    cot = ChainOfThought(InstanceSimilarity)
-                    predication = cot(context=json.dumps(instance), instance=text)
-                #else: Instance RAG
-
-        case "item":
-            try:
-                if uuid:
-                    item = folio_client.folio_get(f"/item-storage/items/{uuid}")
-                else:
-                    item = []
-
-            except httpx.HTTPStatusError as e:
-                if "404 Not Found" in e.args[0]:
-                    raise HTTPException(
-                        status_code=404, detail=f"item {uuid} not Found"
-                    )
-
-            with dspy.context(lm=chatgpt):
-                if uuid:
-                    cot = ChainOfThought(ItemSimilarity)
-                    predication = cot(item=item, text=text)
-                #else: Item RAG
-
-        case _:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Unknown inventory record: {type_of} with {uuid} not found",
-            )
-
-    return {"rationale": predication.rationale, "verifies": predication.verifies}
 
 
 @app.post("/conversation")

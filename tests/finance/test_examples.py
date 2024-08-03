@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 
 from edge_ai.finance.examples.invoice import example as invoice_example
 from edge_ai.finance.examples.order import example as order_example
-from .mock_records import invoice1, order1 .  # noqa
+from .mock_records import invoice1, order1  # noqa
 
 
 def mock_folio_client():
@@ -35,13 +35,13 @@ def mock_folio_client():
     return mock
 
 
-def test_invoice_example(invoice1):
+def test_invoice_example(invoice1):  # noqa
     invoice = invoice_example(invoice1, mock_folio_client())
 
     assert invoice.accountingCode == "40141FEEDER1"
 
 
-def test_order_example(order1):
+def test_order_example(order1):  # noqa
     order = order_example(order1, mock_folio_client())
 
     assert order.orderType == 'One-Time'
