@@ -6,7 +6,7 @@ from edge_ai.inventory.examples.holdings import example as holdings_example
 from edge_ai.inventory.examples.instance import example as instance_example
 from edge_ai.inventory.examples.item import example as item_example
 
-from mock_records import a810372, ah810372_1, ai810372_1_1  # noqa
+from .mock_records import a810372, ah810372_1, ai810372_1_1  # noqa
 
 def mock_folio_client():
     mock = MagicMock()
