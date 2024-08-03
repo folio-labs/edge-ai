@@ -66,11 +66,11 @@ def _po_lines(po_numbers: list, vendor_lookup: dict, client: FolioClient) -> lis
 
 
 
-def example(item: dict, folio_client: FolioClient) -> Example:
+def example(invoice: dict, folio_client: FolioClient) -> Example:
     expanded = {}
     lookups = _invoice_lookups(folio_client)
     vendors = _vendor_lookups(folio_client)
-    for key, payload in item.items():
+    for key, payload in invoice.items():
 
         match key:
 
