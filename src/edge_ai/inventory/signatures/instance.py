@@ -14,7 +14,7 @@ class InstancePromptGeneration(Signature):
     prompt = InputField(desc="""You are an expert cataloger
           Q: Parable of the Sower by Octiva Butler, published in 1993 by Four Walls Eight Windows in New York
 
-           A: {"title": "Parable of the Sower", "source": "ChatGPT", 
+           A: {"title": "Parable of the Sower", "source": "AIModel", "instanceTypeText": "text",
                  "contributors": [{"name": "Octiva Butler", "contributorTypeText": "Author"}], 
                 "publication": [{"publisher": "Four Walls Eight Windows", "dateOfPublication": "1993", "place": "New York"}] }}""")
     instance = OutputField(desc="Return any records as FOLIO JSON")
