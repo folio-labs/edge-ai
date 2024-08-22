@@ -6,6 +6,6 @@
 1. Change to the primary directory `cd edge-ai/` 
 1. Run dependency installation `poetry install`
 1. Source local environmental .env file `source .env`
-1. Run fastapi in local dev mode `poetry run fastapi run src/edge_ai/main.py`
+1. Run fastapi in local dev mode `poetry run fastapi dev src/edge_ai/main.py`
 
 [poetry]: https://python-poetry.org/

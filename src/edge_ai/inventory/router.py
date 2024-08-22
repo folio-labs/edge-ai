@@ -1,5 +1,7 @@
 import json
+import logging
 import os
+import pathlib
 
 import dspy
 import httpx
@@ -15,6 +17,9 @@ from edge_ai.inventory.signatures.instance import (
     InstanceSimilarity,
 )
 from edge_ai.inventory.signatures.item import ItemSimilarity
+from edge_ai.inventory.rag import new_rag_index, update_rag_index
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -28,13 +33,16 @@ folio_client = FolioClient(
 chatgpt = OpenAI(model="gpt-3.5-turbo")
 
 
+class PromptGeneration(BaseModel):
+    text: str
+
+
 class SimilarityBody(BaseModel):
     text: dict
     uuid: str | None = None
 
-
-class PromptGeneration(BaseModel):
-    text: str
+class RAGIndexerBody(BaseModel):
+    source: str
 
 
 @router.post("/inventory/{type_of}/generate")
@@ -48,6 +56,30 @@ async def generate_inventory_record(type_of: str, prompt: PromptGeneration):
                 predication = cot(prompt=prompt.text)
     return {"rationale": predication.rationale, "instance": predication.instance}
 
+
+@router.post("/inventory/{type_of}/index")
+async def index_inventory_records(type_of: str, records_file: RAGIndexerBody):
+
+    records_path = pathlib.Path(records_file.source)
+
+    with records_path.open() as fo:
+        records = [json.loads(line) for line in fo.readlines()]
+
+    index_name = f"{type_of.capitalize()}s"
+
+    index_path = pathlib.Path(f".ragatouille/colbert/indexes/{index_name}")
+
+    if index_path.exists():
+        msg = f"Updating existing {index_path} with {len(records):,} records"
+        await update_rag_index(records, str(index_path.absolute()))
+    else:
+        msg = f"Creating new index for {len(records)} records"
+        await new_rag_index(records, index_name)
+    logger.info(msg)
+
+    return {"message": msg, "index": str(index_path.absolute())}
+ 
+            
 
 @router.post("/inventory/{type_of}/similarity")
 async def check_inventory_record(type_of: str, similarity: SimilarityBody):
