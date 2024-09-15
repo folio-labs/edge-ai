@@ -1,13 +1,19 @@
+import asyncio
 import json
 import logging
 import os
 import pathlib
 
+from http import HTTPStatus
+from typing import Dict
+from uuid import UUID, uuid4
+
 import dspy
 import httpx
 
+from dsp import Claude
 from dspy import ChainOfThought, OpenAI
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, BackgroundTasks, HTTPException
 from folioclient import FolioClient
 from pydantic import BaseModel
 
@@ -17,7 +23,11 @@ from edge_ai.inventory.signatures.instance import (
     InstanceSimilarity,
 )
 from edge_ai.inventory.signatures.item import ItemSimilarity
-from edge_ai.inventory.rag import new_rag_index, update_rag_index
+from edge_ai.inventory.rag import (
+    Instances as InstancesRAG,
+    new_rag_index,
+    update_rag_index,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +40,20 @@ folio_client = FolioClient(
     os.environ.get("ADMIN_PASSWORD"),
 )
 
-chatgpt = OpenAI(model="gpt-3.5-turbo")
+# Defaults are when running AI Workflows Airflow locally
+airflow = {
+    "host": os.environ.get("AIRFLOW_HOST", "http://localhost"),
+    "port": os.environ.get("AIRFLOW_PORT", 8080),
+    "user": os.environ.get("AIRFLOW_USER", "airflow"),
+    "password": os.environ.get("AIRFLOW_PASSWORD", "airflow"),
+}
+
+chatgpt = OpenAI(model=os.environ.get("OPENAI_MODEL"))
+claude = Claude()
+try:
+    instance_rag = InstancesRAG(index_root=".ragatouille/colbert/indexes")
+except FileNotFoundError as e:
+    logger.info(f"No Instance Index Exists")
 
 
 class PromptGeneration(BaseModel):
@@ -40,6 +63,7 @@ class PromptGeneration(BaseModel):
 class SimilarityBody(BaseModel):
     text: dict
     uuid: str | None = None
+
 
 class RAGIndexerBody(BaseModel):
     source: str
@@ -57,8 +81,10 @@ async def generate_inventory_record(type_of: str, prompt: PromptGeneration):
     return {"rationale": predication.rationale, "instance": predication.instance}
 
 
-@router.post("/inventory/{type_of}/index")
-async def index_inventory_records(type_of: str, records_file: RAGIndexerBody):
+@router.post("/inventory/{type_of}/index", status_code=HTTPStatus.ACCEPTED)
+async def index_inventory_records(
+    type_of: str, records_file: RAGIndexerBody, background_tasks: BackgroundTasks
+):
 
     records_path = pathlib.Path(records_file.source)
 
@@ -71,15 +97,42 @@ async def index_inventory_records(type_of: str, records_file: RAGIndexerBody):
 
     if index_path.exists():
         msg = f"Updating existing {index_path} with {len(records):,} records"
-        await update_rag_index(records, str(index_path.absolute()))
+        background_tasks.add_task(
+            update_rag_index, records=records, index_path=str(index_path.absolute())
+        )
     else:
         msg = f"Creating new index for {len(records)} records"
-        await new_rag_index(records, index_name)
+        background_tasks.add_task(new_rag_index, records=records, index_name=index_name)
     logger.info(msg)
 
-    return {"message": msg, "index": str(index_path.absolute())}
- 
-            
+    return {"message": msg}
+
+
+@router.post("/inventory/{type_of}/index/start")
+async def start_instance_embedding_dag(type_of: str, limit: int, offset: int):
+
+    match type_of:
+
+        case "instance":
+            dag_run_url = f"""{airflow["host"]}:{airflow["port"]}/api/v1/dags/instance_embedding/dagRuns"""
+
+        case _:
+            msg = f"{type_of} not implemented for starting RAG DAG run"
+            logger.info(msg)
+            return {"message": msg}
+
+    async with httpx.AsyncClient(
+        auth=httpx.BasicAuth(username=airflow["user"], password=airflow["password"])
+    ) as client:
+        result = await client.post(
+            dag_run_url,
+            json={
+                "conf": {"limit": limit, "offset": offset},
+            },
+        )
+
+        return result.json()
+
 
 @router.post("/inventory/{type_of}/similarity")
 async def check_inventory_record(type_of: str, similarity: SimilarityBody):
@@ -127,7 +180,10 @@ async def check_inventory_record(type_of: str, similarity: SimilarityBody):
                 if uuid:
                     cot = ChainOfThought(InstanceSimilarity)
                     predication = cot(context=json.dumps(instance), instance=text)
-                # else: Instance RAG
+                else:
+                    predication = instance_rag.forward(
+                        operation="verify", instance=text
+                    )
 
         case "item":
             try:
