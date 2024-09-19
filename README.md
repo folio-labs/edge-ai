@@ -25,4 +25,24 @@ export ADMIN_PASSWORD=folio
 1. Source local environmental .env file `source .env`
 1. Run fastapi in local dev mode `poetry run fastapi dev src/edge_ai/main.py`
 
+
+## Running in a Docker container
+To run the `edge-ai` in Docker, you'll need to adjust your `.env` file to follow the
+Docker format of KEY=VALUE like:
+
+```
+ANTHROPIC_API_KEY={your-claude-ai-key}
+GOOGLE_API_KEY={google-gemini-key}
+OKAPI_URL=https://okapi-bugfest-quesnelia.int.aws.folio.org
+TENANT_ID=fs09000000
+ADMIN_USER=folio
+ADMIN_PASSWORD=folio
+```
+
+Then to run use the `--env-file` parameter along with the `--expose` the API port 80 and then to 
+allow the docker host to connect to the container on the host's port 8004 (or another host port) use
+the `-p 8004:80` parameter:
+
+`docker run --env-file .env --expose 80 -p 8004:80 folio-labs/edge-ai:latest`
+
 [poetry]: https://python-poetry.org/
