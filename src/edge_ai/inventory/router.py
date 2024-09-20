@@ -20,6 +20,7 @@ from pydantic import BaseModel
 from edge_ai.inventory.signatures.holdings import HoldingsSimilarity
 from edge_ai.inventory.signatures.instance import (
     InstancePromptGeneration,
+    InstanceSemanticSimilarity,
     InstanceSimilarity,
 )
 from edge_ai.inventory.signatures.item import ItemSimilarity
@@ -56,6 +57,9 @@ except FileNotFoundError as e:
     logger.info(f"No Instance Index Exists")
 
 
+jobs = {}
+
+
 class PromptGeneration(BaseModel):
     text: str
 
@@ -71,14 +75,33 @@ class RAGIndexerBody(BaseModel):
 
 @router.post("/inventory/{type_of}/generate")
 async def generate_inventory_record(type_of: str, prompt: PromptGeneration):
-
+    response = {}
     match type_of:
 
         case "instance":
             with dspy.context(lm=chatgpt):
                 cot = ChainOfThought(InstancePromptGeneration)
                 predication = cot(prompt=prompt.text)
-    return {"rationale": predication.rationale, "instance": predication.instance}
+            response["rationale"] = predication.rationale
+            response["instance"] = predication.instance
+            # Post instance JSON
+            async with httpx.AsyncClient(
+                auth=httpx.BasicAuth(
+                    username=airflow["user"], password=airflow["password"]
+                )
+            ) as client:
+                job_id = str(uuid4())
+                jobs[job_id] = "started"
+                response["job_id"] = job_id
+                result = await client.post(
+                    f"""{airflow["host"]}:{airflow["port"]}/api/v1/dags/instance_generation/dagRuns""",
+                    json={
+                        "conf": {"instance": predication.instance, "jobId": job_id},
+                    },
+                )
+                response["dag_run_id"] = result.json().get("dag_run_id")
+
+    return response
 
 
 @router.post("/inventory/{type_of}/index", status_code=HTTPStatus.ACCEPTED)
@@ -138,7 +161,6 @@ async def start_instance_embedding_dag(type_of: str, limit: int, offset: int):
 async def check_inventory_record(type_of: str, similarity: SimilarityBody):
     text = json.dumps(similarity.text)
     uuid = similarity.uuid
-
     match type_of:
 
         case "holdings":
@@ -210,4 +232,4 @@ async def check_inventory_record(type_of: str, similarity: SimilarityBody):
                 detail=f"Unknown inventory record: {type_of} with {uuid} not found",
             )
 
-    return {"rationale": predication.rationale, "verifies": predication.verifies}
+    return {"rationale": predication.rationale, "score": predication.score}

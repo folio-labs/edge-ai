@@ -96,21 +96,20 @@ class Holdings(Module):
 
 class Instances(Module):
 
-    def __init__(self, index_root: str, num_instances=3):
+    def __init__(self, index_root: str, num_instances=10):
         super().__init__()
         self.k = num_instances
         self.retrieve = RAGatouilleRM(
             index_root=index_root, index_name="Instances", k=num_instances
         )
-        self.verified = ChainOfThought(InstanceSemanticSimilarity)
+        self.score = ChainOfThought(InstanceSemanticSimilarity)
 
     def forward(self, operation: str, instance: str):
         context = self.retrieve(query_or_queries=instance, k=self.k).passages
-
         match operation:
 
             case "verify":
-                predication = self.verified(context=context, query=instance)
+                predication = self.score(context=context, instance=instance)
 
             case _:
                 raise ValueError(
@@ -120,5 +119,5 @@ class Instances(Module):
         return Prediction(
             context=context,
             rationale=predication.rationale,
-            verifies=predication.verifies,
+            score=predication.score,
         )
