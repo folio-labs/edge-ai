@@ -5,7 +5,7 @@ import os
 import pathlib
 
 from http import HTTPStatus
-from typing import Dict
+from typing import Annotated, Dict
 from uuid import UUID, uuid4
 
 import dspy
@@ -13,7 +13,7 @@ import httpx
 
 from dsp import Claude
 from dspy import ChainOfThought, OpenAI
-from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi import APIRouter, BackgroundTasks, File, HTTPException, UploadFile
 from folioclient import FolioClient
 from pydantic import BaseModel
 
@@ -22,6 +22,7 @@ from edge_ai.inventory.signatures.instance import (
     InstancePromptGeneration,
     InstanceSemanticSimilarity,
     InstanceSimilarity,
+    upload_file_generation,
 )
 from edge_ai.inventory.signatures.item import ItemSimilarity
 from edge_ai.inventory.rag import (
@@ -101,6 +102,35 @@ async def generate_inventory_record(type_of: str, prompt: PromptGeneration):
                 )
                 response["dag_run_id"] = result.json().get("dag_run_id")
 
+    return response
+
+
+@router.post("/inventory/from_image")
+async def generate_instance_from_image(image: UploadFile = File(...)):
+    raw_image = image.file.read()
+    result = await upload_file_generation(
+        image=raw_image,
+        model="chatgpt",
+        format=image.content_type,
+    )
+    if "error" in result:
+        #! Should return a 4xx error
+        return result
+    response = {"instance": result}
+    # Post Instance JSON to Airflow
+    async with httpx.AsyncClient(
+        auth=httpx.BasicAuth(username=airflow["user"], password=airflow["password"])
+    ) as client:
+        job_id = str(uuid4())
+        jobs[job_id] = "started"
+        response["job_id"] = job_id
+        result = await client.post(
+            f"""{airflow["host"]}:{airflow["port"]}/api/v1/dags/instance_generation/dagRuns""",
+            json={
+                "conf": {"instance": result, "jobId": job_id},
+            },
+        )
+        response["dag_run_id"] = result.json().get("dag_run_id")
     return response
 
 

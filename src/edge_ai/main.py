@@ -7,13 +7,13 @@ from pathlib import Path
 
 from dspy import OpenAI
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from folioclient import FolioClient
 from jinja2 import Template
 from pydantic import BaseModel
 
 
 from edge_ai.inventory.router import router as inventory_router
-
 
 
 with (Path(__file__).parents[2] / "pyproject.toml").open("rb") as fo:
@@ -40,6 +40,14 @@ project = Project()
 
 app = FastAPI(
     title=project.name, version=project.version, description=project.description
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:8003"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.include_router(inventory_router)
@@ -96,42 +104,33 @@ async def moduleDescriptor():
             "exec": "poetry run fastapi dev src/edge_ai/main.py"
           }
 }"""
-    ).render(project=project, handlers=[
-        {
-            "methods": [
-                "POST"
-            ],
-            "pathPattern": "/inventory/holdings/similiarity",
-            "permissionsRequired": [
-                "edge-ai.post.similiarity"
-            ]
-        },
-        {
-            "methods": [
-                "POST"
-            ],
-            "pathPattern": "/inventory/instance/similiarity",
-            "permissionsRequired": [
-                "edge-ai.post.similiarity"
-            ]
-        },
-        {
-            "methods": [
-                "POST"
-            ],
-            "pathPattern": "/inventory/item/similiarity",
-            "permissionsRequired": [
-                "edge-ai.post.similiarity"
-            ]
-        }
-    ])
+    ).render(
+        project=project,
+        handlers=[
+            {
+                "methods": ["POST"],
+                "pathPattern": "/inventory/holdings/similiarity",
+                "permissionsRequired": ["edge-ai.post.similiarity"],
+            },
+            {
+                "methods": ["POST"],
+                "pathPattern": "/inventory/instance/similiarity",
+                "permissionsRequired": ["edge-ai.post.similiarity"],
+            },
+            {
+                "methods": ["POST"],
+                "pathPattern": "/inventory/item/similiarity",
+                "permissionsRequired": ["edge-ai.post.similiarity"],
+            },
+        ],
+    )
     return json.loads(module_descriptor)
 
 
 @app.get("/")
 async def about():
     return {
-        "name": project.name, 
+        "name": project.name,
         "version": project.version,
         "folio": {
             "okapi_url": os.environ.get("OKAPI_URL"),
@@ -139,7 +138,5 @@ async def about():
             "user": os.environ.get("ADMIN_USER"),
         },
         "date": datetime.now(UTC),
-        "models": {
-            "chatgpt": chatgpt.kwargs["model"]
-        }
+        "models": {"chatgpt": chatgpt.kwargs["model"]},
     }
