@@ -7,6 +7,7 @@ from pathlib import Path
 
 from dspy import OpenAI
 from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from folioclient import FolioClient
 from jinja2 import Template
@@ -55,7 +56,7 @@ app.include_router(inventory_router)
 chatgpt = OpenAI(model="gpt-3.5-turbo")
 
 folio_client = FolioClient(
-    os.environ.get("OKAPI_URL"),
+    os.environ.get("GATEWAY_URL"),
     os.environ.get("TENANT_ID"),
     os.environ.get("ADMIN_USER"),
     os.environ.get("ADMIN_PASSWORD"),
