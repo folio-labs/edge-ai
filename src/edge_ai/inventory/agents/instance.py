@@ -7,7 +7,7 @@ from typing import Optional, Union
 
 from folioclient import FolioClient
 from pydantic import BaseModel
-from pydantic_ai import Agent, RunContext, BinaryContent
+from pydantic_ai import Agent, RunContext
 
 
 logger = logging.getLogger(__name__)
@@ -28,9 +28,6 @@ class Dependencies:
 
 
 agent = Agent(deps_type=Dependencies, result_type=FOLIOInstance)
-
-agent = Agent(deps_type=Dependencies)
-
 
 @agent.tool
 async def from_prompt():
