@@ -51,7 +51,7 @@ app.add_middleware(
 
 app.include_router(inventory_router)
 
-#chatgpt = OpenAI(model="gpt-3.5-turbo")
+# chatgpt = OpenAI(model="gpt-3.5-turbo")
 
 
 folio_client = FolioClient(
@@ -64,7 +64,7 @@ folio_client = FolioClient(
 
 @app.post("/conversation")
 async def conversation(prompt: str):
-    pass
+    return {"message": "Not implemented"}
 
 
 @app.get("/moduleDescriptor.json")
@@ -109,17 +109,12 @@ async def moduleDescriptor():
         handlers=[
             {
                 "methods": ["POST"],
-                "pathPattern": "/inventory/holdings/similiarity",
-                "permissionsRequired": ["edge-ai.post.similiarity"],
+                "pathPattern": "/inventory/instance/generate",
+                "permissionsRequired": ["edge-ai.post.generate"],
             },
             {
                 "methods": ["POST"],
-                "pathPattern": "/inventory/instance/similiarity",
-                "permissionsRequired": ["edge-ai.post.similiarity"],
-            },
-            {
-                "methods": ["POST"],
-                "pathPattern": "/inventory/item/similiarity",
+                "pathPattern": "/inventory/instance/generate_from_image",
                 "permissionsRequired": ["edge-ai.post.similiarity"],
             },
         ],
