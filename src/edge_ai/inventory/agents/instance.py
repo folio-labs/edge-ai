@@ -29,10 +29,6 @@ class Dependencies:
 
 agent = Agent(deps_type=Dependencies, result_type=FOLIOInstance)
 
-@agent.tool
-async def from_prompt():
-    return {}
-
 
 @agent.tool
 async def retrieve_reference_data(ctx: RunContext[str], lookup_type: str, value: str) -> str:
@@ -62,6 +58,19 @@ async def retrieve_reference_data(ctx: RunContext[str], lookup_type: str, value:
 
     return uuid
 
+@agent.tool
+async def new_folio_instance(ctx: RunContext[str], record: dict) -> dict:
+    folio_client = FolioClient(
+        os.environ.get("GATEWAY_URL"),
+        os.environ.get("TENANT_ID"),
+        os.environ.get("ADMIN_USER"),
+        os.environ.get("ADMIN_PASSWORD"),
+    )
+    post_result = folio_client.folio_post("/inventory/instances",
+                                          payload=record)
+    post_result.rasie_for_status()
+    return post_result.json()
+
 
 @agent.system_prompt
 async def expert_cataloger(ctx: RunContext[str]):
@@ -77,7 +86,8 @@ async def expert_cataloger(ctx: RunContext[str]):
 
     prompt += f"""Use the `retrieve_reference_data` function to determine the id for contributorTypeId,
     Use the `retrieve_reference_data` function to determine the id for contributorTypeId,
-    contributorNameTypeId, and instanceTypeId. 
+    contributorNameTypeId, and instanceTypeId. After creating an instance record, use the 
+    `new_folio_instance` function to post the record to the FOLIO Inventory API.\n\n
     
     Here are some examples:
     {ctx.deps.examples}"""

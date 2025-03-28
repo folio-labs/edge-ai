@@ -7,7 +7,6 @@ from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from folioclient import FolioClient
 from jinja2 import Template
 from pydantic import BaseModel
 
@@ -52,14 +51,6 @@ app.add_middleware(
 app.include_router(inventory_router)
 
 # chatgpt = OpenAI(model="gpt-3.5-turbo")
-
-
-folio_client = FolioClient(
-    os.environ.get("GATEWAY_URL"),
-    os.environ.get("TENANT_ID"),
-    os.environ.get("ADMIN_USER"),
-    os.environ.get("ADMIN_PASSWORD"),
-)
 
 
 @app.post("/conversation")

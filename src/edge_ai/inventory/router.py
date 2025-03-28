@@ -7,7 +7,6 @@ from uuid import uuid4
 import httpx
 
 from fastapi import APIRouter, File, UploadFile
-from folioclient import FolioClient
 from pydantic import BaseModel
 from pydantic_ai import BinaryContent
 
@@ -20,13 +19,6 @@ from edge_ai.inventory.agents.instance import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-
-folio_client = FolioClient(
-    os.environ.get("GATEWAY_URL"),
-    os.environ.get("TENANT_ID"),
-    os.environ.get("ADMIN_USER"),
-    os.environ.get("ADMIN_PASSWORD"),
-)
 
 # Defaults are when running AI Workflows Airflow locally
 airflow = {
