@@ -5,10 +5,8 @@ import tomllib
 from datetime import datetime, UTC
 from pathlib import Path
 
-from dspy import OpenAI
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from folioclient import FolioClient
 from jinja2 import Template
 from pydantic import BaseModel
 
@@ -25,15 +23,15 @@ class Project(BaseModel):
 
     @property
     def description(self):
-        return self.toml["tool"]["poetry"]["description"]
+        return self.toml["project"]["description"]
 
     @property
     def name(self):
-        return self.toml["tool"]["poetry"]["name"]
+        return self.toml["project"]["name"]
 
     @property
     def version(self):
-        return self.toml["tool"]["poetry"]["version"]
+        return self.toml["project"]["version"]
 
 
 project = Project()
@@ -52,19 +50,12 @@ app.add_middleware(
 
 app.include_router(inventory_router)
 
-chatgpt = OpenAI(model="gpt-3.5-turbo")
-
-folio_client = FolioClient(
-    os.environ.get("OKAPI_URL"),
-    os.environ.get("TENANT_ID"),
-    os.environ.get("ADMIN_USER"),
-    os.environ.get("ADMIN_PASSWORD"),
-)
+# chatgpt = OpenAI(model="gpt-3.5-turbo")
 
 
 @app.post("/conversation")
 async def conversation(prompt: str):
-    pass
+    return {"message": "Not implemented"}
 
 
 @app.get("/moduleDescriptor.json")
@@ -101,7 +92,7 @@ async def moduleDescriptor():
           ],
           "requires": [],
           "launchDescriptor": {
-            "exec": "poetry run fastapi dev src/edge_ai/main.py"
+            "exec": "uv run fastapi dev src/edge_ai/main.py"
           }
 }"""
     ).render(
@@ -109,17 +100,12 @@ async def moduleDescriptor():
         handlers=[
             {
                 "methods": ["POST"],
-                "pathPattern": "/inventory/holdings/similiarity",
-                "permissionsRequired": ["edge-ai.post.similiarity"],
+                "pathPattern": "/inventory/instance/generate",
+                "permissionsRequired": ["edge-ai.post.generate"],
             },
             {
                 "methods": ["POST"],
-                "pathPattern": "/inventory/instance/similiarity",
-                "permissionsRequired": ["edge-ai.post.similiarity"],
-            },
-            {
-                "methods": ["POST"],
-                "pathPattern": "/inventory/item/similiarity",
+                "pathPattern": "/inventory/instance/generate_from_image",
                 "permissionsRequired": ["edge-ai.post.similiarity"],
             },
         ],
@@ -133,10 +119,10 @@ async def about():
         "name": project.name,
         "version": project.version,
         "folio": {
-            "okapi_url": os.environ.get("OKAPI_URL"),
+            "gateway_url": os.environ.get("GATEWAY_URL"),
             "tenant": os.environ.get("TENANT_ID"),
             "user": os.environ.get("ADMIN_USER"),
         },
         "date": datetime.now(UTC),
-        "models": {"chatgpt": chatgpt.kwargs["model"]},
+        "models": {},
     }
