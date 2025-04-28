@@ -48,7 +48,7 @@ class Dependencies:
     )
 
 
-agent = Agent(deps_type=Dependencies, result_type=FOLIOInstance, retries=2)
+agent = Agent(deps_type=Dependencies, result_type=FOLIOInstance, retries=3)
 
 
 @agent.tool(retries=3)
