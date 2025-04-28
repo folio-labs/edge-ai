@@ -42,15 +42,13 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8003"],
+    allow_origins=["http://localhost:8000", "https://sul-metadata-ai-dev.stanford.edu"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 app.include_router(inventory_router)
-
-# chatgpt = OpenAI(model="gpt-3.5-turbo")
 
 
 @app.post("/conversation")
