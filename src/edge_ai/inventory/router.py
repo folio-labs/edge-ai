@@ -7,10 +7,11 @@ from uuid import uuid4
 
 import httpx
 
-from fastapi import APIRouter, File, UploadFile
+from fastapi import APIRouter, File, UploadFile, Response
 from pydantic import BaseModel
 from pydantic_ai import BinaryContent
 
+from edge_ai.utils.messages import filter_messages
 from edge_ai.inventory.agents.instance import (
     folio_client,
     Dependencies as InstanceDependencies,
@@ -53,7 +54,7 @@ def _set_model(model_name: str):
 
 @router.post("/inventory/{type_of}/generate")
 async def generate_inventory_record(type_of: str, prompt: PromptGeneration):
-    response = {"model_name": prompt.model}
+    response = {}
     match type_of:
         case "instance":
             instance_agent.model = _set_model(prompt.model)
@@ -65,7 +66,7 @@ async def generate_inventory_record(type_of: str, prompt: PromptGeneration):
                 ai_model_info = AIModelInfo(
                     model_name=prompt.model,
                     usage=result.usage(),
-                    messages=result.all_messages(),
+                    messages=filter_messages(result.all_messages()),
                 )
                 response["usage"] = ai_model_info
                 new_instance_result = folio_client.folio_post(
@@ -87,18 +88,27 @@ async def generate_instance_from_image(type_of: str, image: UploadFile = File(..
     response = {}
     match type_of:
         case "instance":
-            result = await instance_agent.run(
-                [BinaryContent(data=raw_image, media_type=image.content_type)],
-                deps=InstanceDependencies(type_of="image_upload"),
-            )
-            response["record"] = json.loads(result.data.record)
+            # Hardcode the model for now
+            model = "openai"
+            instance_agent.model = _set_model(model)
             try:
+                result = await instance_agent.run(
+                    [BinaryContent(data=raw_image, media_type=image.content_type)],
+                    deps=InstanceDependencies(type_of="image_upload"),
+                )
+                response["record"] = json.loads(result.data.record)
+                ai_model_info = AIModelInfo(
+                    model_name=model,
+                    usage=result.usage(),
+                    messages=filter_messages(result.all_messages()),
+                )
+                response["usage"] = ai_model_info
                 new_instance_result = folio_client.folio_post(
                     "/instance-storage/instances", payload=response["record"]
                 )
                 response["folio_response"] = new_instance_result
-            except httpx.HTTPStatusError as error:
-                response["folio_response"] = {"error": str(error)}
+            except Exception as error:
+                response["error"] = str(error)
 
         case _:
             response["error"] = f"{type_of} not supported or unknown to FOLIO"
