@@ -7,6 +7,7 @@ from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi_mcp import FastApiMCP
 from jinja2 import Template
 from pydantic import BaseModel
 
@@ -50,6 +51,9 @@ app.add_middleware(
 
 app.include_router(inventory_router)
 
+# Mounts MCP Server to app
+mcp = FastApiMCP(app)
+mcp.mount()
 
 @app.post("/conversation")
 async def conversation(prompt: str):
