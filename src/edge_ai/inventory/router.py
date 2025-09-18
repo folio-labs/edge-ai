@@ -2,12 +2,8 @@ import json
 import logging
 import os
 
-from typing import Union
-from uuid import uuid4
 
-import httpx
-
-from fastapi import APIRouter, File, UploadFile, Response
+from fastapi import APIRouter, File, UploadFile
 from pydantic import BaseModel
 from pydantic_ai import BinaryContent
 
@@ -52,7 +48,7 @@ def _set_model(model_name: str):
     return model
 
 
-@router.post("/inventory/{type_of}/generate")
+@router.post("/inventory/{type_of}/generate", operation_id="make_inventory_record")
 async def generate_inventory_record(type_of: str, prompt: PromptGeneration):
     response = {}
     match type_of:
@@ -82,7 +78,7 @@ async def generate_inventory_record(type_of: str, prompt: PromptGeneration):
     return response
 
 
-@router.post("/inventory/{type_of}/generate_from_image")
+@router.post("/inventory/{type_of}/generate_from_image", operation_id="make_record_from_image")
 async def generate_instance_from_image(type_of: str, image: UploadFile = File(...)):
     raw_image = image.file.read()
     response = {}
