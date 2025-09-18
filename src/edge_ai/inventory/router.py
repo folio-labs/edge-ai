@@ -2,12 +2,8 @@ import json
 import logging
 import os
 
-from typing import Union
-from uuid import uuid4
 
-import httpx
-
-from fastapi import APIRouter, File, UploadFile, Response
+from fastapi import APIRouter, File, UploadFile
 from pydantic import BaseModel
 from pydantic_ai import BinaryContent
 

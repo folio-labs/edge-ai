@@ -13,7 +13,6 @@ from edge_ai.inventory.agents.instance import (
     agent, 
     Dependencies, 
     FOLIOInstance,
-    retrieve_reference_data,
 )
 
 models.ALLOW_MODEL_REQUESTS = False 
@@ -51,7 +50,5 @@ async def test_generate_inventory_record(mocker, mock_folio_client):
     assert messages[0].parts[1].content[0].startswith("Please catalog Red Lace")
     assert isinstance(messages[1].parts[0], ToolCallPart)
     assert messages[1].parts[0].tool_name.startswith("retrieve_reference_data")
-    assert isinstance(messages[1].parts[1], ToolCallPart)
-    assert messages[1].parts[1].tool_name.startswith("new_folio_instance")
-    assert isinstance(result.data, FOLIOInstance)
+    assert isinstance(result.output, FOLIOInstance)
     

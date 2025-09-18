@@ -10,23 +10,28 @@ from typing import Optional, Union
 from folioclient import FolioClient
 from pydantic import BaseModel
 from pydantic_ai import Agent, RunContext
-from pydantic_ai.usage import Usage
 
 
 logger = logging.getLogger(__name__)
 
 
-folio_client = FolioClient(
-    os.environ.get("GATEWAY_URL"),
-    os.environ.get("TENANT_ID"),
-    os.environ.get("ADMIN_USER"),
-    os.environ.get("ADMIN_PASSWORD"),
-)
+folio_client = None
+
+def _folio_client():
+    global folio_client
+
+    if not folio_client:
+        folio_client = FolioClient(
+            os.environ.get("GATEWAY_URL"),
+            os.environ.get("TENANT_ID"),
+            os.environ.get("ADMIN_USER"),
+            os.environ.get("ADMIN_PASSWORD"),
+        )
+    return folio_client
 
 
 class AIModelInfo(BaseModel):
     model_name: str
-    usage: Union[dict, Usage]
     messages: list
 
 
@@ -48,7 +53,7 @@ class Dependencies:
     )
 
 
-agent = Agent(deps_type=Dependencies, result_type=FOLIOInstance, retries=3)
+agent = Agent(deps_type=Dependencies, output_type=FOLIOInstance, retries=3)
 
 
 @agent.tool(retries=3)
@@ -56,6 +61,7 @@ async def retrieve_reference_data(
     ctx: RunContext[str], lookup_type: str, value: str
 ) -> str:
     """Retrieve reference data from FOLIO Inventory API based on lookup type and value."""
+    folio_client = _folio_client()
     uuid = ""
     match lookup_type:
         case "contributorNameTypeId":

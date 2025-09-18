@@ -1,12 +1,10 @@
 from datetime import datetime
-from typing import List, Optional
-from typing_extensions import Annotated
+from typing import Optional
 
-from pydantic import BaseModel, Field, UUID4
+from pydantic import BaseModel, Field, UUID4, ConfigDict
 
 class Metadata(BaseModel):
-    class Config:
-        extra = Extra.forbid
+    model_config = ConfigDict(extra='forbid')
 
     createdDate: datetime = Field(
         ..., description='Date and time when the record was created'
