@@ -13,6 +13,7 @@ from pydantic import BaseModel
 
 
 from edge_ai.inventory.router import router as inventory_router
+from edge_ai.finance.router import router as invoice_router
 
 
 with (Path(__file__).parents[2] / "pyproject.toml").open("rb") as fo:
@@ -50,6 +51,7 @@ app.add_middleware(
 )
 
 app.include_router(inventory_router)
+app.include_router(invoice_router)
 
 # Mounts MCP Server to app
 mcp = FastApiMCP(app)

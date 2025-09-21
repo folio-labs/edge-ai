@@ -27,13 +27,22 @@ class FOLIOInvoiceLine(BaseModel):
 class FOLIOPOLine(BaseModel):
     record: Union[str, dict]
 
+folio_client = None
 
-folio_client = FolioClient(
-    os.environ.get("GATEWAY_URL"),
-    os.environ.get("TENANT_ID"),
-    os.environ.get("ADMIN_USER"),
-    os.environ.get("ADMIN_PASSWORD"),
-)
+
+def _folio_client():
+    global folio_client
+
+    if not folio_client:
+        folio_client = FolioClient(
+            os.environ.get("GATEWAY_URL"),
+            os.environ.get("TENANT_ID"),
+            os.environ.get("ADMIN_USER"),
+            os.environ.get("ADMIN_PASSWORD"),
+        )
+    return folio_client
+
+
 
 system_instructions = "".join(
     [
@@ -61,6 +70,7 @@ async def batch_group_id():
 @agent.tool
 async def vendor_lookup(ctx: RunContext[str], vendor_name: str):
     vendor_words = vendor_name.strip().split()
+    folio_client = _folio_client()
     for i in range(len(vendor_words), 0, -1):
         query_param = " ".join(vendor_words[:i])
 
