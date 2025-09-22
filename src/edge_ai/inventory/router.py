@@ -1,19 +1,27 @@
 import json
 import logging
+import os
 
 
 from fastapi import APIRouter, File, UploadFile
+from folioclient import FolioClient
+
 from pydantic import BaseModel
 from pydantic_ai import BinaryContent
 
 from edge_ai.utils.messages import filter_messages
 from edge_ai.inventory.agents.instance import (
-    folio_client,
     Dependencies as InstanceDependencies,
     agent as instance_agent,
     AIModelInfo,
 )
 
+folio_client = FolioClient(
+    os.environ.get("GATEWAY_URL"),
+    os.environ.get("TENANT_ID"),
+    os.environ.get("ADMIN_USER"),
+    os.environ.get("ADMIN_PASSWORD"),
+)
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +56,7 @@ async def generate_inventory_record(type_of: str, prompt: PromptGeneration):
                 result = await instance_agent.run(
                     prompt.text, deps=InstanceDependencies()
                 )
-                response["record"] = json.loads(result.data.record)
+                response["record"] = json.loads(result.output.record)
                 ai_model_info = AIModelInfo(
                     model_name=prompt.model,
                     usage=result.usage(),
