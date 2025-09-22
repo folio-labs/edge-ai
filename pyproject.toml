@@ -11,6 +11,7 @@ dependencies = [
     "fastapi[standard]>=0.115.11",
     "folioclient>=0.70.1",
     "pydantic-ai>=1.0.7",
+    "pymilvus>=2.6.2",
 ]
 
 [dependency-groups]
