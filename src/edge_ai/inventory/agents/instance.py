@@ -6,7 +6,6 @@ import os
 from dataclasses import dataclass
 from typing import Optional, Union
 
-
 from folioclient import FolioClient
 from pydantic import BaseModel
 from pydantic_ai import Agent, RunContext
@@ -16,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 folio_client = None
+
 
 def _folio_client():
     global folio_client
