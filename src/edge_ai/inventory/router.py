@@ -4,12 +4,13 @@ import os
 
 
 from fastapi import APIRouter, File, UploadFile
+from folioclient import FolioClient
+
 from pydantic import BaseModel
 from pydantic_ai import BinaryContent
 
 from edge_ai.utils.messages import filter_messages
 from edge_ai.inventory.agents.instance import (
-    folio_client,
     Dependencies as InstanceDependencies,
     agent as instance_agent,
     AIModelInfo,
@@ -18,18 +19,14 @@ from edge_ai.inventory.agents.instance import (
 
 logger = logging.getLogger(__name__)
 
+folio_client = FolioClient(
+    os.environ.get("GATEWAY_URL"),
+    os.environ.get("TENANT_ID"),
+    os.environ.get("ADMIN_USER"),
+    os.environ.get("ADMIN_PASSWORD"),
+)
+
 router = APIRouter()
-
-# Defaults are when running AI Workflows Airflow locally
-airflow = {
-    "host": os.environ.get("AIRFLOW_HOST", "http://localhost"),
-    "port": os.environ.get("AIRFLOW_PORT", 8080),
-    "user": os.environ.get("AIRFLOW_USER", "airflow"),
-    "password": os.environ.get("AIRFLOW_PASSWORD", "airflow"),
-}
-
-
-jobs: dict = {}
 
 
 class PromptGeneration(BaseModel):
@@ -39,11 +36,21 @@ class PromptGeneration(BaseModel):
 
 def _set_model(model_name: str):
     model = None
+    api_key = os.environ.get("PROVIDER_API_KEY")
+    provider_url = os.environ.get("PROVIDER_URL")
+
     match model_name.lower():
         case "openai":
-            from pydantic_ai.models.openai import OpenAIModel
+            from pydantic_ai.models.openai import OpenAIChatModel
+            from pydantic_ai.providers.openai import OpenAIProvider
 
-            model = OpenAIModel("gpt-4o")
+            if provider_url is None:
+                provider = OpenAIProvider(api_key=api_key)
+            else:
+                # For external services that provide OpenAI API compatiblity
+                provider = OpenAIProvider(base_url=provider_url, api_key=api_key)
+
+            model = OpenAIChatModel("gpt-4o", provider=provider)
 
     return model
 
@@ -58,7 +65,7 @@ async def generate_inventory_record(type_of: str, prompt: PromptGeneration):
                 result = await instance_agent.run(
                     prompt.text, deps=InstanceDependencies()
                 )
-                response["record"] = json.loads(result.data.record)
+                response["record"] = json.loads(result.output.record)
                 ai_model_info = AIModelInfo(
                     model_name=prompt.model,
                     usage=result.usage(),
@@ -78,7 +85,9 @@ async def generate_inventory_record(type_of: str, prompt: PromptGeneration):
     return response
 
 
-@router.post("/inventory/{type_of}/generate_from_image", operation_id="make_record_from_image")
+@router.post(
+    "/inventory/{type_of}/generate_from_image", operation_id="make_record_from_image"
+)
 async def generate_instance_from_image(type_of: str, image: UploadFile = File(...)):
     raw_image = image.file.read()
     response = {}
@@ -92,7 +101,7 @@ async def generate_instance_from_image(type_of: str, image: UploadFile = File(..
                     [BinaryContent(data=raw_image, media_type=image.content_type)],
                     deps=InstanceDependencies(type_of="image_upload"),
                 )
-                response["record"] = json.loads(result.data.record)
+                response["record"] = json.loads(result.output.record)
                 ai_model_info = AIModelInfo(
                     model_name=model,
                     usage=result.usage(),
